@@ -2,40 +2,84 @@ import SwiftUI
 
 struct FixturesView: View {
     @EnvironmentObject var fixtureVM: FixtureViewModel
+    @EnvironmentObject var authVM: AuthViewModel
+    @State private var editFixture: Fixture? = nil
+
+    let teamOptions = ["All Teams"] + Team.allCases.map { $0.rawValue }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                DRFCHeader(title: "Fixtures", subtitle: fixtureVM.selectedSeason)
+            ZStack {
+                Color(red: 0.07, green: 0.09, blue: 0.18).ignoresSafeArea()
 
-                if fixtureVM.seasons.count > 1 {
-                    Picker("Season", selection: $fixtureVM.selectedSeason) {
-                        ForEach(fixtureVM.seasons, id: \.self) { Text($0).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-                }
+                VStack(spacing: 0) {
+                    DRFCHeader(title: "Fixtures", subtitle: fixtureVM.selectedSeason)
 
-                if fixtureVM.upcoming.isEmpty {
-                    Spacer()
-                    VStack(spacing: 8) {
-                        Image(systemName: "calendar.badge.exclamationmark")
-                            .font(.system(size: 44))
-                            .foregroundColor(DRFCTheme.lightBlue)
-                        Text("No upcoming fixtures")
-                            .foregroundColor(.secondary)
+                    // Season picker
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(fixtureVM.seasons, id: \.self) { s in
+                                Button(s) { fixtureVM.selectedSeason = s }
+                                    .padding(.horizontal, 12).padding(.vertical, 6)
+                                    .background(fixtureVM.selectedSeason == s ? Color.white : Color.white.opacity(0.15))
+                                    .foregroundColor(fixtureVM.selectedSeason == s ? DRFCTheme.navy : .white)
+                                    .cornerRadius(16).font(.caption).fontWeight(.semibold)
+                            }
+                        }
+                        .padding(.horizontal).padding(.vertical, 8)
                     }
-                    Spacer()
-                } else {
-                    List(fixtureVM.upcoming) { fixture in
-                        FixtureRow(fixture: fixture)
-                            .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+
+                    // Team picker
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(teamOptions, id: \.self) { t in
+                                Button(t) { fixtureVM.selectedTeam = t }
+                                    .padding(.horizontal, 12).padding(.vertical, 6)
+                                    .background(fixtureVM.selectedTeam == t ? DRFCTheme.lightBlue : Color.white.opacity(0.10))
+                                    .foregroundColor(.white)
+                                    .cornerRadius(16).font(.caption).fontWeight(.semibold)
+                            }
+                        }
+                        .padding(.horizontal).padding(.bottom, 8)
                     }
-                    .listStyle(.plain)
+
+                    if fixtureVM.upcoming.isEmpty {
+                        Spacer()
+                        VStack(spacing: 8) {
+                            Image(systemName: "calendar.badge.exclamationmark")
+                                .font(.system(size: 44)).foregroundColor(DRFCTheme.lightBlue)
+                            Text("No upcoming fixtures").foregroundColor(.white.opacity(0.6))
+                        }
+                        Spacer()
+                    } else {
+                        List(fixtureVM.upcoming) { fixture in
+                            FixtureRow(fixture: fixture)
+                                .listRowBackground(Color(red: 0.10, green: 0.13, blue: 0.25))
+                                .swipeActions(edge: .trailing) {
+                                    if authVM.currentUser?.role == .admin {
+                                        Button { editFixture = fixture } label: {
+                                            Label("Edit", systemImage: "pencil")
+                                        }.tint(.orange)
+                                        Button(role: .destructive) {
+                                            fixtureVM.deleteFixture(fixture)
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                        }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
+                    }
                 }
             }
             .navigationBarHidden(true)
+            .sheet(item: $editFixture) { fixture in
+                NavigationStack {
+                    AddFixtureView(existingFixture: fixture)
+                        .environmentObject(fixtureVM)
+                }
+            }
         }
     }
 }
@@ -43,41 +87,28 @@ struct FixturesView: View {
 struct FixtureRow: View {
     let fixture: Fixture
 
-    private var dateString: String {
-        fixture.date.formatted(date: .abbreviated, time: .shortened)
-    }
-
     var body: some View {
         HStack(spacing: 12) {
-            // Home/Away indicator
             VStack(spacing: 4) {
                 Text(fixture.isHome ? "H" : "A")
-                    .font(.caption).fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .font(.caption).fontWeight(.bold).foregroundColor(.white)
                     .frame(width: 28, height: 28)
                     .background(fixture.isHome ? DRFCTheme.navy : DRFCTheme.lightBlue)
                     .clipShape(Circle())
+                Text(fixture.team).font(.caption2).foregroundColor(.white.opacity(0.5))
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(fixture.opponent)
-                    .font(.headline)
-                    .foregroundColor(DRFCTheme.navy)
-                Text(fixture.competition)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                Text(fixture.opponent).font(.headline).foregroundColor(.white)
+                Text(fixture.competition).font(.caption).foregroundColor(.white.opacity(0.6))
             }
 
             Spacer()
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text(dateString)
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(DRFCTheme.navy)
-                Text(fixture.venue)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                Text(fixture.date.formatted(date: .abbreviated, time: .shortened))
+                    .font(.caption).fontWeight(.medium).foregroundColor(.white)
+                Text(fixture.venue).font(.caption2).foregroundColor(.white.opacity(0.6))
             }
         }
         .padding(.vertical, 6)

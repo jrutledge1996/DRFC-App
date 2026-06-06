@@ -8,7 +8,11 @@ struct RegisterView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var confirmPassword = ""
+    @State private var joinCode = ""
     @State private var localError: String?
+    @State private var isChecking = false
+
+    @StateObject private var codeVM = JoinCodeViewModel()
 
     var body: some View {
         NavigationStack {
@@ -25,6 +29,14 @@ struct RegisterView: View {
                     SecureField("Confirm Password", text: $confirmPassword)
                 }
 
+                Section("Club Access") {
+                    TextField("Join Code", text: $joinCode)
+                        .autocapitalization(.none)
+                        .autocorrectionDisabled()
+                    Text("Enter the code provided by your club admin.")
+                        .font(.caption).foregroundColor(.secondary)
+                }
+
                 if let err = localError ?? authVM.errorMessage {
                     Section {
                         Text(err).foregroundColor(.red).font(.caption)
@@ -32,15 +44,31 @@ struct RegisterView: View {
                 }
 
                 Section {
-                    Button("Create Account") {
+                    Button(isChecking ? "Checking..." : "Create Account") {
+                        guard !isChecking else { return }
                         guard password == confirmPassword else {
                             localError = "Passwords do not match."
                             return
                         }
-                        authVM.register(email: email, password: password, displayName: displayName, role: .fan)
+                        guard !joinCode.isEmpty else {
+                            localError = "Please enter the join code."
+                            return
+                        }
+                        isChecking = true
+                        codeVM.verify(code: joinCode) { valid in
+                            DispatchQueue.main.async {
+                                isChecking = false
+                                if valid {
+                                    authVM.register(email: email, password: password,
+                                                    displayName: displayName, role: .fan)
+                                } else {
+                                    localError = "Incorrect join code. Please contact your admin."
+                                }
+                            }
+                        }
                     }
-                    .foregroundColor(DRFCTheme.navy)
-                    .fontWeight(.bold)
+                    .foregroundColor(DRFCTheme.navy).fontWeight(.bold)
+                    .disabled(isChecking)
                 }
             }
             .navigationTitle("Register")

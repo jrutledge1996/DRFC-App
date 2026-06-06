@@ -9,33 +9,23 @@ struct MainTabView: View {
     var body: some View {
         TabView {
             FixturesView()
-                .tabItem {
-                    Label("Fixtures", systemImage: "calendar")
-                }
+                .tabItem { Label("Fixtures", systemImage: "calendar") }
 
             ResultsView()
-                .tabItem {
-                    Label("Results", systemImage: "sportscourt")
-                }
+                .tabItem { Label("Results", systemImage: "sportscourt") }
 
             StatsTabView()
-                .tabItem {
-                    Label("Stats", systemImage: "chart.bar.fill")
-                }
+                .tabItem { Label("Stats", systemImage: "chart.bar.fill") }
 
             if authVM.currentUser?.role == .admin {
                 AdminDashboardView()
-                    .tabItem {
-                        Label("Admin", systemImage: "shield.fill")
-                    }
+                    .tabItem { Label("Admin", systemImage: "shield.fill") }
             }
 
             ProfileView()
-                .tabItem {
-                    Label("Me", systemImage: "person.fill")
-                }
+                .tabItem { Label("Me", systemImage: "person.fill") }
         }
-        .accentColor(DRFCTheme.navy)
+        .accentColor(DRFCTheme.lightBlue)
         .environmentObject(matchVM)
         .environmentObject(fixtureVM)
         .environmentObject(statsVM)
