@@ -5,13 +5,13 @@ import FirebaseFirestore
 class MatchViewModel: ObservableObject {
     @Published var matches: [Match] = []
     @Published var selectedSeason: String = ""
+    @Published var selectedTeam: String = "All Teams"
     @Published var seasons: [String] = []
 
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?
 
     init() { subscribe() }
-
     deinit { listener?.remove() }
 
     func subscribe() {
@@ -32,10 +32,30 @@ class MatchViewModel: ObservableObject {
     }
 
     var filteredMatches: [Match] {
-        matches.filter { $0.season == selectedSeason }
+        matches.filter { m in
+            (selectedSeason.isEmpty || m.season == selectedSeason) &&
+            (selectedTeam == "All Teams" || m.team == selectedTeam)
+        }
     }
 
     func addMatch(_ match: Match) {
-        try? db.collection("matches").addDocument(from: match)
+        // Save match
+        let ref = db.collection("matches").document()
+        var saved = match
+        saved.id = ref.documentID
+        try? ref.setData(from: saved)
+
     }
+
+    func updateMatch(_ match: Match, oldPerformances: [PlayerPerformance] = []) {
+        guard let id = match.id else { return }
+        try? db.collection("matches").document(id).setData(from: match)
+
+    }
+
+    func deleteMatch(_ match: Match) {
+        guard let id = match.id else { return }
+        db.collection("matches").document(id).delete()
+    }
+
 }

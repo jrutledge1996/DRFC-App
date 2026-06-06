@@ -5,13 +5,13 @@ import FirebaseFirestore
 class FixtureViewModel: ObservableObject {
     @Published var fixtures: [Fixture] = []
     @Published var selectedSeason: String = ""
+    @Published var selectedTeam: String = "All Teams"
     @Published var seasons: [String] = []
 
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?
 
     init() { subscribe() }
-
     deinit { listener?.remove() }
 
     func subscribe() {
@@ -31,12 +31,24 @@ class FixtureViewModel: ObservableObject {
             }
     }
 
+    var filtered: [Fixture] {
+        fixtures.filter { f in
+            (selectedSeason.isEmpty || f.season == selectedSeason) &&
+            (selectedTeam == "All Teams" || f.team == selectedTeam)
+        }
+    }
+
     var upcoming: [Fixture] {
-        fixtures.filter { !$0.isPlayed && $0.season == selectedSeason && $0.date >= Date() }
+        filtered.filter { !$0.isPlayed && $0.date >= Date() }
     }
 
     func addFixture(_ fixture: Fixture) {
         try? db.collection("fixtures").addDocument(from: fixture)
+    }
+
+    func updateFixture(_ fixture: Fixture) {
+        guard let id = fixture.id else { return }
+        try? db.collection("fixtures").document(id).setData(from: fixture)
     }
 
     func deleteFixture(_ fixture: Fixture) {
