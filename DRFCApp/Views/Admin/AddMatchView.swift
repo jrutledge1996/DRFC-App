@@ -85,7 +85,7 @@ struct AddMatchView: View {
                     } label: {
                         HStack {
                             Text(selectedFixtureId == nil ? "Link to fixture (optional)" : "Fixture linked")
-                                .foregroundColor(selectedFixtureId == nil ? .secondary : DRFCTheme.navy)
+                                .foregroundColor(selectedFixtureId == nil ? .secondary : DRFCTheme.adaptiveAccent)
                             Spacer()
                             Image(systemName: "chevron.down").foregroundColor(.secondary)
                         }
@@ -172,7 +172,7 @@ struct AddMatchView: View {
                     showPicker = true
                 } label: {
                     Image(systemName: "plus.circle.fill")
-                        .foregroundColor(DRFCTheme.navy)
+                        .foregroundColor(DRFCTheme.adaptiveAccent)
                         .font(.title3)
                 }
                 .padding(.trailing)
@@ -306,7 +306,7 @@ struct StarterSlotRow: View {
                             Spacer()
                             if perf.points > 0 {
                                 Text("\(perf.points)pts").font(.caption).fontWeight(.bold)
-                                    .foregroundColor(DRFCTheme.navy)
+                                    .foregroundColor(DRFCTheme.adaptiveAccent)
                             }
                             Image(systemName: expanded ? "chevron.up" : "chevron.down")
                                 .font(.caption).foregroundColor(.secondary)
@@ -320,7 +320,7 @@ struct StarterSlotRow: View {
                     Button { onTap() } label: {
                         Text("Add Player").foregroundColor(.secondary).font(.subheadline)
                         Spacer()
-                        Image(systemName: "plus").foregroundColor(DRFCTheme.navy)
+                        Image(systemName: "plus").foregroundColor(DRFCTheme.adaptiveAccent)
                     }
                 }
             }
@@ -365,7 +365,7 @@ struct BenchPlayerRow: View {
                         Spacer()
                         if performance.points > 0 {
                             Text("\(performance.points)pts").font(.caption).fontWeight(.bold)
-                                .foregroundColor(DRFCTheme.navy)
+                                .foregroundColor(DRFCTheme.adaptiveAccent)
                         }
                         Image(systemName: expanded ? "chevron.up" : "chevron.down")
                             .font(.caption).foregroundColor(.secondary)
@@ -408,7 +408,7 @@ struct ScoringInputView: View {
                 counterField("Att", value: $performance.kicksAttempted)
                 if let pct = performance.kickingPercentage {
                     Text(String(format: "%.0f%%", pct))
-                        .font(.caption).fontWeight(.bold).foregroundColor(DRFCTheme.navy)
+                        .font(.caption).fontWeight(.bold).foregroundColor(DRFCTheme.adaptiveAccent)
                 }
             }
         }
@@ -421,11 +421,11 @@ struct ScoringInputView: View {
             Text(label).font(.caption2).foregroundColor(.secondary)
             HStack(spacing: 6) {
                 Button { if value.wrappedValue > 0 { value.wrappedValue -= 1 } } label: {
-                    Image(systemName: "minus.circle").foregroundColor(DRFCTheme.navy)
+                    Image(systemName: "minus.circle").foregroundColor(DRFCTheme.adaptiveAccent)
                 }
                 Text("\(value.wrappedValue)").font(.subheadline).fontWeight(.bold).frame(minWidth: 20)
                 Button { value.wrappedValue += 1 } label: {
-                    Image(systemName: "plus.circle").foregroundColor(DRFCTheme.navy)
+                    Image(systemName: "plus.circle").foregroundColor(DRFCTheme.adaptiveAccent)
                 }
             }
         }

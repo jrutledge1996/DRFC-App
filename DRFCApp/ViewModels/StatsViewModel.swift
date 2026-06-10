@@ -34,6 +34,7 @@ class StatsViewModel: ObservableObject {
 
     private var allMatches: [Match] = []
     private var backfillMap: [String: PlayerBackfill] = [:] // playerId -> backfill
+    private var displayNameMap: [String: String] = [:]      // playerId -> nickname (or name)
     private let db = Firestore.firestore()
     private var matchListener: ListenerRegistration?
     private var playerListener: ListenerRegistration?
@@ -62,9 +63,15 @@ class StatsViewModel: ObservableObject {
             .addSnapshotListener { [weak self] snapshot, _ in
                 guard let docs = snapshot?.documents else { return }
                 var map: [String: PlayerBackfill] = [:]
+                var names: [String: String] = [:]
                 for doc in docs {
                     let data = doc.data()
                     let name = data["name"] as? String ?? ""
+                    // Prefer the nickname wherever stats are displayed.
+                    let nickname = (data["nickname"] as? String ?? "")
+                        .trimmingCharacters(in: .whitespaces)
+                    let display = nickname.isEmpty ? name : nickname
+                    if !display.isEmpty { names[doc.documentID] = display }
                     var byTeam = data["backfilledAppearancesByTeam"] as? [String: Int] ?? [:]
                     // Fall back to legacy single-team backfill fields if the new map is absent.
                     if byTeam.isEmpty, let legacy = data["backfilledAppearances"] as? Int, legacy > 0 {
@@ -77,6 +84,7 @@ class StatsViewModel: ObservableObject {
                 }
                 DispatchQueue.main.async {
                     self?.backfillMap = map
+                    self?.displayNameMap = names
                     self?.recompute()
                 }
             }
@@ -107,7 +115,7 @@ class StatsViewModel: ObservableObject {
                 }
                 if apps > 0 {
                     statsMap[playerId] = PlayerStat(
-                        id: playerId, name: backfill.name,
+                        id: playerId, name: displayNameMap[playerId] ?? backfill.name,
                         appearances: apps,
                         tries: 0, conversions: 0, penalties: 0, dropGoals: 0,
                         kicksAttempted: 0, kicksMade: 0
@@ -118,12 +126,14 @@ class StatsViewModel: ObservableObject {
 
         for match in matches {
             for perf in match.playerPerformances where perf.played {
+                // Use the player's nickname if they have one set.
+                let displayName = displayNameMap[perf.playerId] ?? perf.playerName
                 var stat = statsMap[perf.playerId] ?? PlayerStat(
-                    id: perf.playerId, name: perf.playerName,
+                    id: perf.playerId, name: displayName,
                     appearances: 0, tries: 0, conversions: 0, penalties: 0, dropGoals: 0,
                     kicksAttempted: 0, kicksMade: 0
                 )
-                if stat.name.isEmpty { stat.name = perf.playerName }
+                if stat.name.isEmpty { stat.name = displayName }
                 stat.appearances    += 1
                 stat.tries          += perf.tries
                 stat.conversions    += perf.conversions

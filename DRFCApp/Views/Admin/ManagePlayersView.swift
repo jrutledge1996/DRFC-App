@@ -1,6 +1,4 @@
 import SwiftUI
-import FirebaseStorage
-import PhotosUI
 
 struct ManagePlayersView: View {
     @EnvironmentObject var playerVM: PlayerViewModel
@@ -8,9 +6,19 @@ struct ManagePlayersView: View {
     @State private var showAdd = false
     @State private var editPlayer: Player? = nil
     @State private var filterRegistered = false
+    @State private var searchText = ""
 
     var displayedPlayers: [Player] {
-        filterRegistered ? playerVM.players.filter { $0.isRegistered } : playerVM.players
+        var result = filterRegistered ? playerVM.players.filter { $0.isRegistered } : playerVM.players
+        let query = searchText.trimmingCharacters(in: .whitespaces)
+        if !query.isEmpty {
+            result = result.filter {
+                $0.name.localizedCaseInsensitiveContains(query) ||
+                ($0.nickname ?? "").localizedCaseInsensitiveContains(query) ||
+                $0.position.localizedCaseInsensitiveContains(query)
+            }
+        }
+        return result
     }
 
     var body: some View {
@@ -51,6 +59,7 @@ struct ManagePlayersView: View {
                 }
             }
         }
+        .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always), prompt: "Search players")
         .navigationTitle("Squad (\(playerVM.players.count))")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -77,26 +86,11 @@ struct PlayerRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            // Photo or placeholder
-            Group {
-                if let url = player.photoURL, let imageURL = URL(string: url) {
-                    AsyncImage(url: imageURL) { img in
-                        img.resizable().scaledToFill()
-                    } placeholder: {
-                        Image(systemName: "person.fill")
-                            .foregroundColor(.white.opacity(0.6))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(DRFCTheme.navy)
-                    }
-                } else {
-                    Image(systemName: "person.fill")
-                        .foregroundColor(.white.opacity(0.6))
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .background(DRFCTheme.navy)
-                }
-            }
-            .frame(width: 44, height: 44)
-            .clipShape(Circle())
+            Image(systemName: "person.fill")
+                .foregroundColor(.white.opacity(0.6))
+                .frame(width: 44, height: 44)
+                .background(DRFCTheme.navy)
+                .clipShape(Circle())
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
@@ -140,9 +134,6 @@ struct AddPlayerView: View {
     @State private var isRegistered = false
     @State private var showBackfill = false
     @State private var backfillByTeam: [String: String] = [:]
-    @State private var selectedPhoto: PhotosPickerItem? = nil
-    @State private var photoData: Data? = nil
-    @State private var isUploading = false
 
     /// Parsed { team -> count }, dropping blanks and zeros
     private var parsedBackfill: [String: Int] {
@@ -166,35 +157,13 @@ struct AddPlayerView: View {
                     Toggle("Registered", isOn: $isRegistered)
                 }
 
-                Section("Player Photo") {
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        HStack {
-                            if let data = photoData, let uiImage = UIImage(data: data) {
-                                Image(uiImage: uiImage)
-                                    .resizable().scaledToFill()
-                                    .frame(width: 48, height: 48).clipShape(Circle())
-                            } else {
-                                Image(systemName: "person.crop.circle.badge.plus")
-                                    .font(.title2).foregroundColor(DRFCTheme.navy)
-                            }
-                            Text(photoData == nil ? "Add Photo" : "Change Photo")
-                                .foregroundColor(DRFCTheme.navy)
-                        }
-                    }
-                    .onChange(of: selectedPhoto) { _, item in
-                        Task {
-                            photoData = try? await item?.loadTransferable(type: Data.self)
-                        }
-                    }
-                }
-
                 Section("Historical Data") {
                     Toggle("Backfill previous appearances", isOn: $showBackfill)
                     if showBackfill {
                         BackfillTeamEditor(backfillByTeam: $backfillByTeam)
                         if backfillTotal > 0 {
                             Text("Total: \(backfillTotal) appearances")
-                                .font(.caption).fontWeight(.semibold).foregroundColor(DRFCTheme.navy)
+                                .font(.caption).fontWeight(.semibold).foregroundColor(DRFCTheme.adaptiveAccent)
                         }
                         Text("Enter appearances per team made before this app was set up.")
                             .font(.caption).foregroundColor(.secondary)
@@ -202,24 +171,18 @@ struct AddPlayerView: View {
                 }
 
                 Section {
-                    Button(isUploading ? "Saving..." : "Add Player") {
-                        guard !name.isEmpty, !isUploading else { return }
-                        isUploading = true
+                    Button("Add Player") {
+                        guard !name.isEmpty else { return }
                         var p = Player(name: name, position: position,
                                        number: Int(number), isActive: true)
                         p.isRegistered = isRegistered
                         p.nickname = nickname.isEmpty ? nil : nickname
                         p.yearOfBirth = Int(yearOfBirth)
                         p.backfilledAppearancesByTeam = showBackfill ? parsedBackfill : [:]
-
-                        if let data = photoData {
-                            playerVM.uploadPhotoAndAdd(player: p, imageData: data) { dismiss() }
-                        } else {
-                            playerVM.addPlayer(p)
-                            dismiss()
-                        }
+                        playerVM.addPlayer(p)
+                        dismiss()
                     }
-                    .foregroundColor(DRFCTheme.navy).fontWeight(.bold).disabled(isUploading)
+                    .foregroundColor(DRFCTheme.adaptiveAccent).fontWeight(.bold)
                 }
             }
             .navigationTitle("Add Player")
@@ -246,9 +209,6 @@ struct EditPlayerView: View {
     @State private var isRegistered = false
     @State private var isActive = true
     @State private var backfillByTeam: [String: String] = [:]
-    @State private var selectedPhoto: PhotosPickerItem? = nil
-    @State private var photoData: Data? = nil
-    @State private var isUploading = false
 
     /// Parsed { team -> count }, dropping blanks and zeros
     private var parsedBackfill: [String: Int] {
@@ -271,44 +231,18 @@ struct EditPlayerView: View {
                     Toggle("Active", isOn: $isActive)
                 }
 
-                Section("Player Photo") {
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                        HStack {
-                            Group {
-                                if let data = photoData, let uiImage = UIImage(data: data) {
-                                    Image(uiImage: uiImage).resizable().scaledToFill()
-                                } else if let url = player.photoURL, let imageURL = URL(string: url) {
-                                    AsyncImage(url: imageURL) { img in img.resizable().scaledToFill() }
-                                    placeholder: { Image(systemName: "person.fill").foregroundColor(.gray) }
-                                } else {
-                                    Image(systemName: "person.crop.circle.badge.plus")
-                                        .font(.title2).foregroundColor(DRFCTheme.navy)
-                                        .frame(width: 48, height: 48)
-                                }
-                            }
-                            .frame(width: 48, height: 48).clipShape(Circle())
-                            Text("Change Photo").foregroundColor(DRFCTheme.navy)
-                        }
-                    }
-                    .onChange(of: selectedPhoto) { _, item in
-                        Task { photoData = try? await item?.loadTransferable(type: Data.self) }
-                    }
-                }
-
                 Section("Historical Appearances") {
                     BackfillTeamEditor(backfillByTeam: $backfillByTeam)
                     if backfillTotal > 0 {
                         Text("Total: \(backfillTotal) appearances")
-                            .font(.caption).fontWeight(.semibold).foregroundColor(DRFCTheme.navy)
+                            .font(.caption).fontWeight(.semibold).foregroundColor(DRFCTheme.adaptiveAccent)
                     }
                     Text("Count appearances per team made before this app was set up.")
                         .font(.caption).foregroundColor(.secondary)
                 }
 
                 Section {
-                    Button(isUploading ? "Saving..." : "Save Changes") {
-                        guard !isUploading else { return }
-                        isUploading = true
+                    Button("Save Changes") {
                         var updated = player
                         updated.name = name
                         updated.position = position
@@ -318,15 +252,10 @@ struct EditPlayerView: View {
                         updated.isRegistered = isRegistered
                         updated.isActive = isActive
                         updated.backfilledAppearancesByTeam = parsedBackfill
-
-                        if let data = photoData {
-                            playerVM.uploadPhotoAndUpdate(player: updated, imageData: data) { dismiss() }
-                        } else {
-                            playerVM.updatePlayer(updated)
-                            dismiss()
-                        }
+                        playerVM.updatePlayer(updated)
+                        dismiss()
                     }
-                    .foregroundColor(DRFCTheme.navy).fontWeight(.bold).disabled(isUploading)
+                    .foregroundColor(DRFCTheme.adaptiveAccent).fontWeight(.bold)
                 }
             }
             .navigationTitle("Edit Player")

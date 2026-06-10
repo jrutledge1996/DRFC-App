@@ -42,6 +42,13 @@ class FixtureViewModel: ObservableObject {
         filtered.filter { !$0.isPlayed && $0.date >= Date() }
     }
 
+    /// Fixtures that have already been played or whose date has passed,
+    /// most recent first.
+    var previous: [Fixture] {
+        filtered.filter { $0.isPlayed || $0.date < Date() }
+            .sorted { $0.date > $1.date }
+    }
+
     func addFixture(_ fixture: Fixture) {
         try? db.collection("fixtures").addDocument(from: fixture)
     }

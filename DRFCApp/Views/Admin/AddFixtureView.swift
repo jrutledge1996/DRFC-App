@@ -50,7 +50,7 @@ struct AddFixtureView: View {
                     }
                     dismiss()
                 }
-                .foregroundColor(DRFCTheme.navy)
+                .foregroundColor(DRFCTheme.adaptiveAccent)
                 .fontWeight(.bold)
             }
         }

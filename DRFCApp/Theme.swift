@@ -9,6 +9,14 @@ struct DRFCTheme {
     static let secondaryText = Color.white.opacity(0.70)
     static let accent = Color.white
 
+    /// Navy in light mode, light blue in dark mode — readable accent on
+    /// system (adaptive) backgrounds like Forms and grouped lists.
+    static let adaptiveAccent = Color(UIColor { traits in
+        traits.userInterfaceStyle == .dark
+            ? UIColor(red: 0.45, green: 0.72, blue: 0.92, alpha: 1)
+            : UIColor(red: 0.05, green: 0.12, blue: 0.30, alpha: 1)
+    })
+
     // Gradient used in headers
     static var navyGradient: LinearGradient {
         LinearGradient(

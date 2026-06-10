@@ -4,8 +4,13 @@ struct FixturesView: View {
     @EnvironmentObject var fixtureVM: FixtureViewModel
     @EnvironmentObject var authVM: AuthViewModel
     @State private var editFixture: Fixture? = nil
+    @State private var showPrevious = false
 
     let teamOptions = ["All Teams"] + Team.allCases.map { $0.rawValue }
+
+    var displayedFixtures: [Fixture] {
+        showPrevious ? fixtureVM.previous : fixtureVM.upcoming
+    }
 
     var body: some View {
         NavigationStack {
@@ -43,16 +48,30 @@ struct FixturesView: View {
                         .padding(.horizontal).padding(.bottom, 8)
                     }
 
-                    if fixtureVM.upcoming.isEmpty {
+                    // Upcoming / Previous toggle
+                    HStack(spacing: 8) {
+                        ForEach([false, true], id: \.self) { previous in
+                            Button(previous ? "Previous" : "Upcoming") { showPrevious = previous }
+                                .padding(.horizontal, 14).padding(.vertical, 6)
+                                .background(showPrevious == previous ? Color.white : Color.white.opacity(0.15))
+                                .foregroundColor(showPrevious == previous ? DRFCTheme.navy : .white)
+                                .cornerRadius(16).font(.caption).fontWeight(.semibold)
+                        }
+                        Spacer()
+                    }
+                    .padding(.horizontal).padding(.bottom, 8)
+
+                    if displayedFixtures.isEmpty {
                         Spacer()
                         VStack(spacing: 8) {
                             Image(systemName: "calendar.badge.exclamationmark")
                                 .font(.system(size: 44)).foregroundColor(DRFCTheme.lightBlue)
-                            Text("No upcoming fixtures").foregroundColor(.white.opacity(0.6))
+                            Text(showPrevious ? "No previous fixtures" : "No upcoming fixtures")
+                                .foregroundColor(.white.opacity(0.6))
                         }
                         Spacer()
                     } else {
-                        List(fixtureVM.upcoming) { fixture in
+                        List(displayedFixtures) { fixture in
                             FixtureRow(fixture: fixture)
                                 .listRowBackground(Color(red: 0.10, green: 0.13, blue: 0.25))
                                 .swipeActions(edge: .trailing) {

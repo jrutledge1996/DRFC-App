@@ -67,7 +67,7 @@ struct RegisterView: View {
                             }
                         }
                     }
-                    .foregroundColor(DRFCTheme.navy).fontWeight(.bold)
+                    .foregroundColor(DRFCTheme.adaptiveAccent).fontWeight(.bold)
                     .disabled(isChecking)
                 }
             }

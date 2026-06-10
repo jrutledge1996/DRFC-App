@@ -63,7 +63,6 @@ struct Player: Identifiable, Codable {
 
     // Pre-app backfilled appearances per team — e.g. ["1sts": 30, "2nds": 10]
     var backfilledAppearancesByTeam: [String: Int] = [:]
-    var photoURL: String? = nil
 
     /// Total backfilled appearances across all teams
     var totalBackfilledAppearances: Int { backfilledAppearancesByTeam.values.reduce(0, +) }
@@ -79,7 +78,7 @@ struct Player: Identifiable, Codable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, name, position, number, isActive, isRegistered, photoURL, nickname
+        case id, name, position, number, isActive, isRegistered, nickname
         case backfilledAppearancesByTeam, yearOfBirth
     }
 }
@@ -108,7 +107,6 @@ extension Player {
         isRegistered = try c.decodeIfPresent(Bool.self, forKey: .isRegistered) ?? false
         nickname = try c.decodeIfPresent(String.self, forKey: .nickname)
         yearOfBirth = try c.decodeIfPresent(Int.self, forKey: .yearOfBirth)
-        photoURL = try c.decodeIfPresent(String.self, forKey: .photoURL)
 
         // New per-team map, or migrate from the legacy single-team fields.
         var byTeam = try c.decodeIfPresent([String: Int].self, forKey: .backfilledAppearancesByTeam) ?? [:]
